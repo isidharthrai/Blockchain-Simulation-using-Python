@@ -4,6 +4,8 @@
 <h2>Features/Instructions</h2>
 <ol>
 <li>Required package "hashlib"</li>
+<li>Script "block.py" is implementation of an actual Block, The function "hash_block" is used for calculating hash value for the argumented block.</li>
+
 <li>Add Three different types of customised block.</li>
 <li>Add a new block using "addBlock.py"</li>
 <li>Validate your block using "validate_blockchain.py"</li>
