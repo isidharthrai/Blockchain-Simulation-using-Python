@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planet Chain / Rantaian Planet</title>
+<style>
+:root{--bg:#10205e;--ink:#14213d;--ok:#1f9d6b;--okbg:#e3f8ee;--bad:#e5484d;--badbg:#ffe6e6;--sun:#ffc233;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif;font-size:18px;line-height:1.4;padding:16px 16px 48px}
+header,main{max-width:1150px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:14px}
+h1{margin:0;font-size:clamp(30px,5vw,50px)}
+.sub{margin:4px 0 0;font-size:20px}
+.lang{display:flex;border:3px solid #fff;border-radius:999px;overflow:hidden}
+.lang button{font:inherit;font-weight:700;border:0;background:transparent;color:#fff;padding:8px 18px;cursor:pointer}
+.lang button[aria-pressed=true]{background:#fff;color:var(--bg)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0 0 16px;padding:0;list-style:none}
+.steps li{background:var(--sun);color:var(--ink);border-radius:16px;padding:10px 14px;font-weight:700}
+.panel{background:var(--card);color:var(--ink);border-radius:20px;padding:16px;margin-bottom:16px}
+.panel h2{margin:0 0 10px;font-size:20px}
+.planets{display:flex;flex-wrap:wrap;gap:10px}
+button.pl,button.big{font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:14px;padding:10px 16px;cursor:pointer;background:#fff;color:var(--ink);box-shadow:0 4px 0 var(--ink)}
+button.pl:active,button.big:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+button:focus-visible,input:focus-visible{outline:4px solid #7a5cff;outline-offset:2px}
+#warn,#good,#err{display:none;color:#fff;font-weight:700;padding:14px 16px;border-radius:16px;margin-bottom:16px}
+#warn{background:var(--bad)}#good{background:var(--ok)}#err{background:#7a5cff}
+#warn.on,#good.on,#err.on{display:block}
+.chain{display:flex;flex-wrap:wrap;align-items:stretch;row-gap:14px}
+.link{align-self:center;font-size:30px;padding:0 6px}
+.block{width:230px;background:var(--okbg);border:4px solid var(--ok);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.block.bad{background:var(--badbg);border-color:var(--bad)}
+.block.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.top{display:flex;justify-content:space-between;align-items:center;font-weight:800}
+.badge{font-size:15px;padding:2px 10px;border-radius:999px;background:var(--ok);color:#fff}
+.bad .badge{background:var(--bad)}
+.lab{font-size:14px;font-weight:700;margin-bottom:2px}
+.nm{display:flex;align-items:center;gap:8px}
+.nm .ic{font-size:30px}
+.block input{width:100%;font:inherit;padding:8px 10px;border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink)}
+.fp{background:#fff;border:2px dashed var(--ink);border-radius:10px;padding:6px 8px;text-align:center}
+.fp .em{font-size:24px;letter-spacing:2px;display:block}
+.fp code{font-size:13px;font-weight:700;word-break:break-all}
+.fp.sm .em{font-size:17px}.fp.sm code{font-size:11px}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.note{font-size:16px;opacity:.9}
+@media (prefers-reduced-motion:reduce){.block.shake{animation:none}}
+@media (max-width:560px){.block{width:100%}.link{width:100%;text-align:center;transform:rotate(90deg);height:36px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="t-title"></h1><p class="sub" id="t-sub"></p></div>
+  <div class="lang" role="group" aria-label="Language / Bahasa">
+    <button id="b-en" aria-pressed="true">English</button>
+    <button id="b-ms" aria-pressed="false">Bahasa Melayu</button>
+  </div>
+</header>
+<main>
+  <ol class="steps"><li id="s1"></li><li id="s2"></li><li id="s3"></li></ol>
+  <section class="panel"><h2 id="t-pick"></h2><div class="planets" id="planets"></div></section>
+  <div id="err"></div><div id="warn" role="alert"></div><div id="good"></div>
+  <section class="panel">
+    <div class="chain" id="chain"></div>
+    <div class="tools">
+      <button class="big" id="fixbtn"></button>
+      <button class="big" id="resetbtn"></button>
+    </div>
+  </section>
+  <section class="panel" id="explain"></section>
+</main>
+<script>
+const T={
+en:{title:"Planet Chain 🪐",sub:"Add planets. Then try to cheat the chain!",
+s1:"1. Press a planet to add it to the chain.",s2:"2. Change the name inside an old block.",s3:"3. Watch the chain turn red!",
+pick:"Add a planet",blk:"Block",name:"Planet",fp:"Fingerprint",pfp:"Fingerprint of the block before",safe:"Safe",broken:"Broken",
+warn:"Someone changed a block! Its fingerprint changed, so it no longer matches. Every block after it can't be trusted either.",
+good:"All blocks are safe. Try changing a name in one of them!",fix:"Fix the chain (redo every block)",reset:"Start again",
+err:"Can't reach the Python program. Start it with: python server.py",
+ex:"<b>How does it work?</b><br>Every block has a <b>fingerprint</b>. Python makes it from the planet name <i>and</i> the fingerprint of the block before it (this is real SHA-256, from block.py). Change one letter and the fingerprint changes completely. The next block remembers the old fingerprint, so it notices. To cheat you would have to redo every block after it, and everyone else has a copy to compare!"},
+ms:{title:"Rantaian Planet 🪐",sub:"Tambah planet. Kemudian cuba menipu rantaian!",
+s1:"1. Tekan satu planet untuk menambahnya.",s2:"2. Tukar nama dalam blok lama.",s3:"3. Lihat rantaian bertukar merah!",
+pick:"Tambah planet",blk:"Blok",name:"Planet",fp:"Cap jari",pfp:"Cap jari blok sebelum ini",safe:"Selamat",broken:"Rosak",
+warn:"Ada orang menukar satu blok! Cap jarinya berubah, jadi tidak sepadan lagi. Semua blok selepasnya juga tidak boleh dipercayai.",
+good:"Semua blok selamat. Cuba tukar satu nama dalam mana-mana blok!",fix:"Baiki rantaian (buat semula semua blok)",reset:"Mula semula",
+err:"Tidak dapat menghubungi program Python. Mulakan dengan: python server.py",
+ex:"<b>Bagaimana ia berfungsi?</b><br>Setiap blok ada <b>cap jari</b>. Python membuatnya daripada nama planet <i>dan</i> cap jari blok sebelumnya (ini SHA-256 sebenar, dari block.py). Tukar satu huruf sahaja, cap jari berubah sepenuhnya. Blok seterusnya masih ingat cap jari lama, jadi ia perasan. Untuk menipu, anda perlu membuat semula semua blok selepasnya, dan orang lain ada salinan untuk dibandingkan!"}};
+const PL=[["Mercury","Utarid","⚪"],["Venus","Zuhrah","🟠"],["Earth","Bumi","🌍"],["Mars","Marikh","🔴"],["Jupiter","Musytari","🟤"],["Saturn","Zuhal","🪐"],["Uranus","Uranus","🔵"],["Neptune","Neptun","🌀"],["Pluto","Pluto","⚫"]];
+const EM=["🐙","🦊","🐸","🐼","🦄","🐯","🐳","🦉","🐝","🐢","🦋","🐧","🐵","🦖","🐬","🦀"];
+let L="en",C=[];
+const $=id=>document.getElementById(id);
+const norm=d=>d==="Jupiter Block"?"Jupiter":d;
+const find=d=>PL.find(p=>p[0]===norm(d));
+const disp=d=>{const p=find(d);return p?(L==="ms"?p[1]:p[0]):d};
+const icon=d=>{const p=find(d);return p?p[2]:"❓"};
+const toEN=(t,i)=>{const k=t.trim().toLowerCase();const p=PL.find(p=>p[0].toLowerCase()===k||p[1].toLowerCase()===k);
+  if(!p)return t;return (i===0&&p[0]==="Jupiter")?"Jupiter Block":p[0]};
+const emo=h=>[...h.slice(0,4)].map(c=>EM[parseInt(c,16)]).join("");
+const fp=(h,sm)=>`<div class="fp${sm?" sm":""}"><span class="em">${emo(h)}</span><code>${h.slice(0,16)}…</code></div>`;
+async function api(path,body){
+  try{const r=await fetch(path,body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const j=await r.json();$("err").classList.remove("on");return j}
+  catch(e){$("err").textContent=T[L].err;$("err").classList.add("on");return null}}
+function build(){
+  const t=T[L],el=$("chain");el.innerHTML="";
+  C.forEach((b,i)=>{
+    if(i){const l=document.createElement("div");l.className="link";l.textContent="🔗";el.appendChild(l)}
+    const d=document.createElement("div");d.className="block";d.id="b"+i;
+    d.innerHTML=`<div class="top"><span>${t.blk} ${b.index+1}</span><span class="badge"></span></div>
+    <div><div class="lab">${t.name}</div><div class="nm"><span class="ic"></span><input maxlength="30" aria-label="${t.name} ${i+1}"></div></div>
+    <div><div class="lab">${t.pfp}</div>${fp(b.previous_hash==="0"?"00000000":b.previous_hash,true)}</div>
+    <div><div class="lab">${t.fp}</div><div class="cur"></div></div>`;
+    const inp=d.querySelector("input");inp.value=disp(b.data);
+    inp.addEventListener("input",async()=>{const was=C.map(x=>x.broken);
+      const r=await api("/api/tamper",{index:i,data:toEN(inp.value,i)});if(r){C=r;paint(was)}});
+    el.appendChild(d)});
+  paint(null)}
+function paint(was){
+  const t=T[L];
+  C.forEach((b,i)=>{const d=$("b"+i);if(!d)return;
+    d.classList.toggle("bad",b.broken);
+    d.querySelector(".badge").textContent=b.broken?"❌ "+t.broken:"✅ "+t.safe;
+    d.querySelector(".ic").textContent=icon(b.data);
+    d.querySelector(".cur").innerHTML=fp(b.hash,false);
+    if(was&&b.broken&&!was[i]){d.classList.remove("shake");void d.offsetWidth;d.classList.add("shake")}});
+  const any=C.some(b=>b.broken);
+  $("warn").textContent=t.warn;$("warn").classList.toggle("on",any);
+  $("good").textContent=t.good;$("good").classList.toggle("on",!any&&C.length>1)}
+async function act(path,body){const r=await api(path,body||{});if(r){C=r;build()}}
+function lang(l){L=l;const t=T[l];document.documentElement.lang=l;
+  $("b-en").setAttribute("aria-pressed",l==="en");$("b-ms").setAttribute("aria-pressed",l==="ms");
+  $("t-title").textContent=t.title;$("t-sub").textContent=t.sub;$("s1").textContent=t.s1;$("s2").textContent=t.s2;$("s3").textContent=t.s3;
+  $("t-pick").textContent=t.pick;$("fixbtn").textContent=t.fix;$("resetbtn").textContent=t.reset;$("explain").innerHTML=t.ex;
+  const box=$("planets");box.innerHTML="";
+  PL.forEach(p=>{const b=document.createElement("button");b.className="pl";b.textContent=p[2]+" "+(l==="ms"?p[1]:p[0]);
+    b.onclick=()=>act("/api/add",{data:p[0]});box.appendChild(b)});
+  if(C.length)build()}
+$("fixbtn").onclick=()=>act("/api/fix");
+$("resetbtn").onclick=()=>act("/api/reset");
+$("b-en").onclick=()=>lang("en");$("b-ms").onclick=()=>lang("ms");
+lang("en");
+api("/api/chain").then(r=>{if(r){C=r;build()}});
+</script>
+</body>
+</html>
